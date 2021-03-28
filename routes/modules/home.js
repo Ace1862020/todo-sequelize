@@ -6,7 +6,7 @@ const Todo = db.Todo
 const User = db.User
 
 router.get('/', (req, res) => {
-  console.log('req.user :', req.user)
+  //console.log('req.user :', req.user)
   User.findByPk(req.user.id)
     .then((user) => {
       if (!user) throw new Error('user not found')
