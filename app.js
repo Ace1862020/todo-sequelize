@@ -5,19 +5,23 @@ const methodOverride = require('method-override')
 const bodyParser = require('body-parser')
 const flash = require('connect-flash')
 
+if (process.env.NODE_ENV !== 'droduction') {
+  require('dotenv').config()
+}
+
 const routes = require('./routes')
 
 // 載入一包 passport 設定檔(passport.js)
 const usePassport = require('./config/passport')
 
 const app = express()
-const PORT = 3000
+const PORT = process.env.PORT
 
 app.engine('hbs', exphbs({ defaultLayout: 'main', extname: '.hbs' }))
 app.set('view engine', 'hbs')
 
 app.use(session({
-  secret: 'ThisMyTodoSecret',
+  secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: true
 }))
@@ -38,7 +42,6 @@ app.use((req, res, next) => {
 })
 
 app.use(routes)
-
 
 app.listen(PORT, () => {
   console.log(`App is running on http://localhost:${PORT}`)
