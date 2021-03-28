@@ -1,7 +1,10 @@
 const express = require('express')
+const session = require('express-session')
 const exphbs = require('express-handlebars')
 const methodOverride = require('method-override')
 const bodyParser = require('body-parser')
+// 載入 passport 套件本身
+const passport = require('passport')
 const bcrypt = require('bcryptjs')
 
 const app = express()
@@ -13,8 +16,20 @@ const User = db.User
 
 app.engine('hbs', exphbs({ defaultLayout: 'main', extname: '.hbs' }))
 app.set('view engine', 'hbs')
+
+app.use(session({
+  secret: 'ThisMyTodoSecret',
+  resave: false,
+  saveUninitialized: true
+}))
+
+// 載入一包 passport 設定檔(passport.js)
+const usePassport = require('./config/passport')
+
 app.use(bodyParser.urlencoded({ extended: true }))
 app.use(methodOverride('_method'))
+
+usePassport(app)
 
 // 首頁
 app.get('/', (req, res) => {
@@ -35,9 +50,10 @@ app.get('/users/login', (req, res) => {
   res.render('login')
 })
 // 登入檢查
-app.post('/users/login', (req, res) => {
-  res.send('login')
-})
+app.post('/users/login', passport.authenticate('local', {
+  successRedirect: '/',
+  failureRedirect: '/users/login'
+}))
 
 // 註冊頁面
 app.get('/users/register', (req, res) => {
@@ -46,8 +62,23 @@ app.get('/users/register', (req, res) => {
 // 註冊檢查
 app.post('/users/register', (req, res) => {
   const { name, email, password, confirmPassword } = req.body
-  User.create({ name, email, password })
-    .then(user => res.redirect('/'))
+  User.findOne({ where: { email } })
+    .then(user => {
+      if (user) {
+        console.log('User already exists')
+        return res.render('register', { name, email, password, confirmPassword })
+      }
+      return bcrypt
+        .genSalt(10)
+        .then(salt => bcrypt.hash(password, salt))
+        .then(hash => User.create({
+          name,
+          email,
+          password: hash
+        }))
+        .then(() => res.redirect('/'))
+        .catch(error => console.log(error))
+    })
 })
 
 // 詳細頁
